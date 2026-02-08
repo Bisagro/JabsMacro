@@ -1,0 +1,1548 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Support Case Viewer</title>
+
+<style>
+:root {
+    --primary: #ee4d2d;
+    --primary-soft: #fff2ee;
+    --dark: #222;
+    --light: #f5f5f5;
+    --border: #e0e0e0;
+    --success: #28a745;
+    --modal-bg: rgba(0, 0, 0, 0.5);
+    --sidebar-bg: #f8f9fa;
+}
+
+* {
+    box-sizing: border-box;
+    font-family: "Segoe UI", system-ui, sans-serif;
+}
+
+body {
+    margin: 0;
+    background: var(--light);
+    padding: 20px;
+}
+
+.container {
+    max-width: 1200px;
+    margin: auto;
+}
+
+/* Chat Icon */
+.chat-icon {
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    width: 60px;
+    height: 60px;
+    background: var(--primary);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 24px;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    z-index: 1000;
+    transition: transform 0.3s, box-shadow 0.3s;
+}
+
+.chat-icon:hover {
+    transform: scale(1.1);
+    box-shadow: 0 6px 16px rgba(0,0,0,0.3);
+}
+
+/* Modal */
+.modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: var(--modal-bg);
+    z-index: 2000;
+    overflow-y: auto;
+}
+
+.modal-content {
+    background: white;
+    margin: 50px auto;
+    width: 90%;
+    max-width: 900px;
+    border-radius: 10px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    position: relative;
+    max-height: 80vh;
+    display: flex;
+    overflow: hidden;
+}
+
+.modal-header {
+    padding: 20px;
+    background: var(--primary);
+    color: white;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 70px;
+    z-index: 2;
+}
+
+.modal-title {
+    margin: 0;
+    font-size: 20px;
+    font-weight: 600;
+}
+
+.modal-close {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 28px;
+    cursor: pointer;
+    line-height: 1;
+    padding: 0;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Modal Body - Sidebar + Content */
+.modal-body {
+    display: flex;
+    width: 100%;
+    height: 100%;
+    margin-top: 70px; /* Account for header */
+}
+
+/* Sidebar */
+.sidebar {
+    width: 80px;
+    background: var(--sidebar-bg);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px 0;
+    overflow-y: auto;
+}
+
+.sidebar-icon {
+    width: 45px;
+    height: 45px;
+    background: white;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    margin-bottom: 15px;
+    cursor: pointer;
+    border: 2px solid transparent;
+    transition: all 0.3s;
+    flex-shrink: 0;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.sidebar-icon:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+    border-color: var(--primary);
+}
+
+.sidebar-icon.active {
+    background: var(--primary);
+    color: white;
+    border-color: var(--primary);
+    box-shadow: 0 4px 8px rgba(238,77,45,0.3);
+}
+
+.sidebar-icon-label {
+    font-size: 10px;
+    margin-top: 4px;
+    text-align: center;
+    color: #666;
+    font-weight: 500;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    padding: 0 2px;
+}
+
+.sidebar-icon.active .sidebar-icon-label {
+    color: var(--primary);
+    font-weight: 600;
+}
+
+/* Content Area */
+.content-area {
+    flex: 1;
+    padding: 25px;
+    overflow-y: auto;
+    max-height: calc(80vh - 70px);
+}
+
+.section-title {
+    color: var(--primary);
+    font-size: 18px;
+    font-weight: 600;
+    margin-bottom: 20px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid var(--primary-soft);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.section-title::before {
+    font-size: 22px;
+}
+
+/* Modal Reply Items */
+.modal-reply-item {
+    margin-bottom: 12px;
+    padding: 14px;
+    background-color: #f5f5f5;
+    border-left: 3px solid #007bff;
+    border-radius: 6px;
+    cursor: pointer;
+    position: relative;
+    transition: background-color 0.2s, transform 0.2s;
+}
+
+.modal-reply-item:last-child {
+    margin-bottom: 0;
+}
+
+.modal-reply-item:hover {
+    background-color: #e9e9e9;
+    transform: translateX(2px);
+}
+
+.modal-reply-item.copied {
+    background: rgba(40,167,69,.12);
+    border-left-color: var(--success);
+}
+
+/* Reminder Section */
+.reminder-section {
+    background: #fff8e1;
+    border: 1px solid #ffd54f;
+    border-radius: 8px;
+    padding: 15px;
+    margin-top: 20px;
+}
+
+.reminder-title {
+    color: #ff9800;
+    font-weight: 600;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.reminder-title::before {
+    content: "⏰";
+    font-size: 18px;
+}
+
+/* Controls */
+.controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+    margin-bottom: 20px;
+    position: relative;
+}
+
+.controls input,
+.controls select {
+    padding: 12px 14px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    font-size: 14px;
+    width: 260px;
+}
+
+.controls input:focus,
+.controls select:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 2px rgba(238,77,45,.15);
+}
+
+/* Search Results Dropdown */
+.search-results {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    width: 260px;
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    box-shadow: 0 4px 12px rgba(0,0,0,.1);
+    max-height: 300px;
+    overflow-y: auto;
+    z-index: 1000;
+    display: none;
+}
+
+.search-result-item {
+    padding: 12px 14px;
+    cursor: pointer;
+    border-bottom: 1px solid var(--border);
+    transition: background .2s;
+}
+
+.search-result-item:hover {
+    background: var(--primary-soft);
+}
+
+.search-result-item:last-child {
+    border-bottom: none;
+}
+
+.result-category {
+    font-size: 11px;
+    color: #666;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 2px;
+}
+
+.result-title {
+    font-size: 14px;
+    color: var(--dark);
+    font-weight: 500;
+}
+
+.result-content {
+    font-size: 12px;
+    color: #666;
+    margin-top: 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.result-match {
+    background: rgba(238,77,45,.1);
+    padding: 0 2px;
+    border-radius: 2px;
+}
+
+.no-results {
+    padding: 12px 14px;
+    color: #666;
+    font-style: italic;
+}
+
+/* Info Card */
+.info-card {
+    background: #fff;
+    border-radius: 10px;
+    padding: 24px;
+    box-shadow: 0 4px 12px rgba(0,0,0,.08);
+    display: none;
+}
+
+.info-title {
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--primary);
+    margin-bottom: 16px;
+    border-bottom: 2px solid var(--primary);
+    padding-bottom: 8px;
+}
+
+.info-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+}
+
+.info-item {
+    background: #fff;
+    padding: 14px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    border-left: 4px solid var(--primary);
+    position: relative;
+}
+
+.info-item.copyable {
+    cursor: pointer;
+    transition: .2s;
+}
+
+.info-item.copyable:hover {
+    background: var(--primary-soft);
+    transform: translateY(-1px);
+}
+
+.info-item.copyable.copied {
+    background: rgba(40,167,69,.12);
+    border-left-color: var(--success);
+}
+
+.info-item label {
+    font-weight: 600;
+    font-size: 13px;
+    color: #666;
+    display: block;
+    margin-bottom: 6px;
+}
+
+.info-item p {
+    margin: 0;
+    font-size: 14px;
+}
+
+.full {
+    grid-column: span 2;
+}
+
+/* Reply items styling - main card */
+.reply-item {
+    margin-bottom: 10px;
+    padding: 10px;
+    background-color: #f5f5f5;
+    border-left: 3px solid #007bff;
+    border-radius: 4px;
+    cursor: pointer;
+    position: relative;
+    transition: background-color .2s;
+}
+
+.reply-item:last-child {
+    margin-bottom: 0;
+}
+
+.reply-item:hover {
+    background-color: #e9e9e9;
+}
+
+.reply-item.copied {
+    background: rgba(40,167,69,.12);
+    border-left-color: var(--success);
+}
+
+/* Tooltip */
+.info-item.copyable::after,
+.reply-item::after,
+.modal-reply-item::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    top: -30px;
+    left: 10px;
+    background: #333;
+    color: #fff;
+    font-size: 12px;
+    padding: 4px 8px;
+    border-radius: 4px;
+    opacity: 0;
+    transition: .2s;
+    pointer-events: none;
+    white-space: nowrap;
+}
+
+.info-item.copyable:hover::after,
+.reply-item:hover::after,
+.modal-reply-item:hover::after {
+    opacity: 1;
+}
+
+.info-item.copyable.copied::after,
+.reply-item.copied::after,
+.modal-reply-item.copied::after {
+    background: var(--success);
+}
+
+/* Empty state */
+.no-section-selected {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: #666;
+    font-style: italic;
+    text-align: center;
+    padding: 40px;
+}
+
+@media (max-width: 768px) {
+    .info-grid {
+        grid-template-columns: 1fr;
+    }
+    .full {
+        grid-column: span 1;
+    }
+    .controls input,
+    .controls select {
+        width: 100%;
+    }
+    .search-results {
+        width: 100%;
+    }
+    .modal-content {
+        width: 95%;
+        margin: 20px auto;
+        max-height: 90vh;
+        flex-direction: column;
+    }
+    .modal-body {
+        flex-direction: column;
+        margin-top: 70px;
+    }
+    .sidebar {
+        width: 100%;
+        flex-direction: row;
+        padding: 10px;
+        overflow-x: auto;
+        border-right: none;
+        border-bottom: 1px solid var(--border);
+    }
+    .sidebar-icon {
+        margin-bottom: 0;
+        margin-right: 10px;
+        flex-shrink: 0;
+    }
+    .sidebar-icon-label {
+        display: none;
+    }
+    .content-area {
+        max-height: calc(90vh - 150px);
+    }
+    .chat-icon {
+        bottom: 20px;
+        right: 20px;
+        width: 50px;
+        height: 50px;
+        font-size: 20px;
+    }
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+    <div class="controls">
+        <input type="text" id="searchInput" placeholder="Search anything...">
+        <div id="searchResults" class="search-results"></div>
+
+        <select id="categorySelect">
+            <option value="">Select Category</option>
+            <option value="logistics">Logistics</option>
+            <option value="refund">Return & Refund</option>
+            <option value="spaylater">SPayLater</option>
+            <option value="others">Others</option>
+        </select>
+
+        <select id="subCategorySelect" style="display:none;">
+            <option value="">Select Issue</option>
+        </select>
+    </div>
+
+    <div class="info-card" id="infoCard">
+        <div class="info-title" id="title"></div>
+
+        <div class="info-grid">
+            <div class="info-item full copyable" data-label="Case Subject">
+                <label>Case Subject</label>
+                <p id="subject"></p>
+            </div>
+
+            <div class="info-item full copyable" data-label="Reason Code">
+                <label>Reason Code</label>
+                <p id="reason"></p>
+            </div>
+
+            <!-- Replies Container - NOT copyable, only inner items are -->
+            <div class="info-item full" data-label="Replies">
+                <label>Replies</label>
+                <div id="replies-container"></div>
+            </div>
+
+            <div class="info-item full copyable" data-label="Internal Note">
+                <label>Internal Note</label>
+                <p id="note"></p>
+            </div>
+
+            <div class="info-item full copyable" data-label="Escalation Team">
+                <label>Escalation Team</label>
+                <p id="team"></p>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<!-- Chat Icon -->
+<div class="chat-icon" id="chatIcon">
+    💬
+</div>
+
+<!-- Chat Modal -->
+<div class="modal" id="chatModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 class="modal-title">Chat Template Guide</h2>
+            <button class="modal-close" id="closeModal">&times;</button>
+        </div>
+        <div class="modal-body">
+            <!-- Sidebar with icons -->
+            <div class="sidebar" id="sidebar"></div>
+            
+            <!-- Content area for selected section -->
+            <div class="content-area" id="contentArea">
+                <div class="no-section-selected">
+                    Click on an icon to view chat templates
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+const data = {
+    logistics: {
+        "out-for-delivery": {
+            title: "Logistics – Out for Delivery",
+            subject: "[LOGS] Delivery status of Order#",
+            reason: "Logistics > Shipping > Other shipping issues",
+            reply: [
+                "Your parcel is currently out for delivery. Please ensure someone is available to receive it.",
+                "The delivery is scheduled for today. You can track the live location in the app.",
+                "Please make sure your contact number is reachable for the delivery attempt."
+            ],
+            note: "N/A",
+            team: "N/A"
+        },
+        "Order Status Inquiry": {
+            title: "Logistics – Order Status Inquiry",
+            subject: "[LOGS] Delivery status of Order#",
+            reason: "Logistics > Shipping > Other shipping issues",
+            reply: [
+                "I can see your order is currently being processed. Expected delivery is within 3-5 business days.",
+                "Your order has been shipped and is in transit to your location."
+            ],
+            note: "N/A",
+            team: "N/A"
+        },
+        "Wrong Address": {
+            title: "Logistics – Wrong Address",
+            subject: "Parcel Out for Delivery",
+            reason: "LG-201",
+            reply: "Your parcel is currently out for delivery. Please ensure someone is available to receive it.",
+            note: "Follow up if not delivered by EOD.",
+            team: "Logistics Team"
+        },
+        "Overseas Shipping Inquiry": {
+            title: "Logistics – Overseas Shipping Inquiry",
+            subject: "Parcel Out for Delivery",
+            reason: "LG-201",
+            reply: "Your parcel is currently out for delivery. Please ensure someone is available to receive it.",
+            note: "Follow up if not delivered by EOD.",
+            team: "Logistics Team"
+        },
+        "SSL Contact Inquiry": {
+            title: "Logistics – SSL Contact Inquiry",
+            subject: "Parcel Out for Delivery",
+            reason: "LG-201",
+            reply: "Your parcel is currently out for delivery. Please ensure someone is available to receive it.",
+            note: "Follow up if not delivered by EOD.",
+            team: "Logistics Team"
+        },
+        "out-for-delivery > 24 hours": {
+            title: "Logistics – Out for Delivery > 24 hours",
+            subject: "Parcel Out for Delivery",
+            reason: "LG-201",
+            reply: "Your parcel is currently out for delivery. Please ensure someone is available to receive it.",
+            note: "Follow up if not delivered by EOD.",
+            team: "Logistics Team"
+        },
+        "Last Mile Hub": {
+            title: "Logistics – Last Mile Hub",
+            subject: "Parcel Out for Delivery",
+            reason: "LG-201",
+            reply: "Your parcel is currently out for delivery. Please ensure someone is available to receive it.",
+            note: "Follow up if not delivered by EOD.",
+            team: "Logistics Team"
+        },
+        "International Express": {
+            title: "Logistics – International Express",
+            subject: "Parcel Out for Delivery",
+            reason: "LG-201",
+            reply: "Your parcel is currently out for delivery. Please ensure someone is available to receive it.",
+            note: "Follow up if not delivered by EOD.",
+            team: "Logistics Team"
+        },
+        "Same Day Delivery": {
+            title: "Logistics – Same Day Delivery",
+            subject: "Parcel Out for Delivery",
+            reason: "LG-201",
+            reply: "Your parcel is currently out for delivery. Please ensure someone is available to receive it.",
+            note: "Follow up if not delivered by EOD.",
+            team: "Logistics Team"
+        },
+        "Next Day Delivery": {
+            title: "Logistics – Next Day Delivery",
+            subject: "Parcel Out for Delivery",
+            reason: "LG-201",
+            reply: "Your parcel is currently out for delivery. Please ensure someone is available to receive it.",
+            note: "Follow up if not delivered by EOD.",
+            team: "Logistics Team"
+        },
+        "Instant Delivery": {
+            title: "Logistics – Instant Delivery",
+            subject: "Parcel Out for Delivery",
+            reason: "LG-201",
+            reply: "Your parcel is currently out for delivery. Please ensure someone is available to receive it.",
+            note: "Follow up if not delivered by EOD.",
+            team: "Logistics Team"
+        },
+        "Parcel Stuck": {
+            title: "Logistics – Parcel Stuck",
+            subject: "Parcel Out for Delivery",
+            reason: "LG-201",
+            reply: "Your parcel is currently out for delivery. Please ensure someone is available to receive it.",
+            note: "Follow up if not delivered by EOD.",
+            team: "Logistics Team"
+        },
+        "Change Delivery Adress": {
+            title: "Logistics – Change Delivery Adress",
+            subject: "Parcel Out for Delivery",
+            reason: "LG-201",
+            reply: "Your parcel is currently out for delivery. Please ensure someone is available to receive it.",
+            note: "Follow up if not delivered by EOD.",
+            team: "Logistics Team"
+        },
+        "Manual Push": {
+            title: "Logistics – Manual Push",
+            subject: "Parcel Out for Delivery",
+            reason: "LG-201",
+            reply: "Your parcel is currently out for delivery. Please ensure someone is available to receive it.",
+            note: "Follow up if not delivered by EOD.",
+            team: "Logistics Team"
+        },
+        "Contact Information": {
+            title: "Logistics – Contact Information",
+            subject: "Parcel Out for Delivery",
+            reason: "LG-201",
+            reply: "Your parcel is currently out for delivery. Please ensure someone is available to receive it.",
+            note: "Follow up if not delivered by EOD.",
+            team: "Logistics Team"
+        },
+        "Expedite Parcel": {
+            title: "Logistics – Expedite Parcel",
+            subject: "Parcel Out for Delivery",
+            reason: "LG-201",
+            reply: "Your parcel is currently out for delivery. Please ensure someone is available to receive it.",
+            note: "Follow up if not delivered by EOD.",
+            team: "Logistics Team"
+        },
+        "Reverse Pickup": {
+            title: "Logistics – Reverse Pickup",
+            subject: "Parcel Out for Delivery",
+            reason: "LG-201",
+            reply: "Your parcel is currently out for delivery. Please ensure someone is available to receive it.",
+            note: "Follow up if not delivered by EOD.",
+            team: "Logistics Team"
+        },
+        "RTS Parcel": {
+            title: "Logistics – RTS Parcel",
+            subject: "Parcel Out for Delivery",
+            reason: "LG-201",
+            reply: "Your parcel is currently out for delivery. Please ensure someone is available to receive it.",
+            note: "Follow up if not delivered by EOD.",
+            team: "Logistics Team"
+        },
+        "Misroute Parcel": {
+            title: "Logistics – Misroute Parcel",
+            subject: "Parcel Out for Delivery",
+            reason: "LG-201",
+            reply: "Your parcel is currently out for delivery. Please ensure someone is available to receive it.",
+            note: "Follow up if not delivered by EOD.",
+            team: "Logistics Team"
+        },
+        "Failed Delivery Attempt": {
+            title: "Logistics – Failed Delivery Attempt",
+            subject: "Parcel Out for Delivery",
+            reason: "LG-201",
+            reply: "Your parcel is currently out for delivery. Please ensure someone is available to receive it.",
+            note: "Follow up if not delivered by EOD.",
+            team: "Logistics Team"
+        },
+        "EDD Inqury": {
+            title: "Logistics – EDD Inqury",
+            subject: "Parcel Out for Delivery",
+            reason: "LG-201",
+            reply: "Your parcel is currently out for delivery. Please ensure someone is available to receive it.",
+            note: "Follow up if not delivered by EOD.",
+            team: "Logistics Team"
+        },
+        "Request to Cancel Order": {
+            title: "Logistics – Request to Cancel Order",
+            subject: "Parcel Out for Delivery",
+            reason: "LG-201",
+            reply: "Your parcel is currently out for delivery. Please ensure someone is available to receive it.",
+            note: "Follow up if not delivered by EOD.",
+            team: "Logistics Team"
+        },
+        "SPX Self Collection General Inquiry": {
+            title: "Logistics – SPX Self Collection General Inquiry",
+            subject: "Parcel Out for Delivery",
+            reason: "LG-201",
+            reply: "Your parcel is currently out for delivery. Please ensure someone is available to receive it.",
+            note: "Follow up if not delivered by EOD.",
+            team: "Logistics Team"
+        },
+        "SPX Self Collection Operating Hours": {
+            title: "Logistics – SPX Self Collection Operating Hours",
+            subject: "Parcel Out for Delivery",
+            reason: "LG-201",
+            reply: "Your parcel is currently out for delivery. Please ensure someone is available to receive it.",
+            note: "Follow up if not delivered by EOD.",
+            team: "Logistics Team"
+        },
+        "SPX Self Collection Wrong Contact Numbers": {
+            title: "Logistics – SPX Self Collection Wrong Contact Numbers",
+            subject: "Parcel Out for Delivery",
+            reason: "LG-201",
+            reply: "Your parcel is currently out for delivery. Please ensure someone is available to receive it.",
+            note: "Follow up if not delivered by EOD.",
+            team: "Logistics Team"
+        },
+        "SPX Self Collection Point not Found": {
+            title: "Logistics – SPX Self Collection Point not Found",
+            subject: "Parcel Out for Delivery",
+            reason: "LG-201",
+            reply: "Your parcel is currently out for delivery. Please ensure someone is available to receive it.",
+            note: "Follow up if not delivered by EOD.",
+            team: "Logistics Team"
+        },
+        "SPX Self Collection Parcel Missing": {
+            title: "Logistics – SPX Self Collection Parcel Missing",
+            subject: "Parcel Out for Delivery",
+            reason: "LG-201",
+            reply: "Your parcel is currently out for delivery. Please ensure someone is available to receive it.",
+            note: "Follow up if not delivered by EOD.",
+            team: "Logistics Team"
+        },
+        "SPX Self Collection Self Schedule Collection": {
+            title: "Logistics – SPX Self Collection Self Schedule Collection",
+            subject: "Parcel Out for Delivery",
+            reason: "LG-201",
+            reply: "Your parcel is currently out for delivery. Please ensure someone is available to receive it.",
+            note: "Follow up if not delivered by EOD.",
+            team: "Logistics Team"
+        },
+        "SPX Self Collection PIN Inquiry": {
+            title: "Logistics – SPX Self Collection PIN Inquiry",
+            subject: "Parcel Out for Delivery",
+            reason: "LG-201",
+            reply: "Your parcel is currently out for delivery. Please ensure someone is available to receive it.",
+            note: "Follow up if not delivered by EOD.",
+            team: "Logistics Team"
+        },
+        "SPX Self Collection ": {
+            title: "Logistics – SPX Self Collection ",
+            subject: "Parcel Out for Delivery",
+            reason: "LG-201",
+            reply: "Your parcel is currently out for delivery. Please ensure someone is available to receive it.",
+            note: "Follow up if not delivered by EOD.",
+            team: "Logistics Team"
+        },
+    },
+
+    refund: {
+        "Damage": {
+            title: "Return & Refund – Damage",
+            subject: "Refund Pending",
+            reason: "RF-205",
+            reply: "Refund will reflect within 5–7 working days.",
+            note: "Eligible for full refund.",
+            team: "Refund Team"
+        },
+        "Wrong Item": {
+            title: "Return & Refund – Wrong Item",
+            subject: "Refund Pending",
+            reason: "RF-205",
+            reply: "Refund will reflect within 5–7 working days.",
+            note: "Eligible for full refund.",
+            team: "Refund Team"
+        },
+        "Faulty Item": {
+            title: "Return & Refund – Faulty Item",
+            subject: "Refund Pending",
+            reason: "RF-205",
+            reply: "Refund will reflect within 5–7 working days.",
+            note: "Eligible for full refund.",
+            team: "Refund Team"
+        },
+        "Counterfeit (STRICTLY SHOPEEMALL ONLY)": {
+            title: "Return & Refund – Counterfeit (STRICTLY SHOPEEMALL ONLY)",
+            subject: "Refund Pending",
+            reason: "RF-205",
+            reply: "Refund will reflect within 5–7 working days.",
+            note: "Eligible for full refund.",
+            team: "Refund Team"
+        },
+        "Incomplete Item": {
+            title: "Refund – Incomplete Item",
+            subject: "Return & Refund Pending",
+            reason: "RF-205",
+            reply: "Refund will reflect within 5–7 working days.",
+            note: "Eligible for full refund.",
+            team: "Refund Team"
+        },
+        "Refund Status in Shopee Wallet": {
+            title: "Return & Refund – Refund Status in Shopee Wallet",
+            subject: "Refund Pending",
+            reason: "RF-205",
+            reply: "Refund will reflect within 5–7 working days.",
+            note: "Eligible for full refund.",
+            team: "Refund Team"
+        },
+        "Refund Status in Shopee Wallet (Exceed Limit)": {
+            title: "Return & Refund – Refund Status in Shopee Wallet (Exceed Limit)",
+            subject: "Refund Pending",
+            reason: "RF-205",
+            reply: "Refund will reflect within 5–7 working days.",
+            note: "Eligible for full refund.",
+            team: "Refund Team"
+        },
+        "Refund Status in Bank Account": {
+            title: "Return & Refund – Refund Status in Bank Account",
+            subject: "Refund Pending",
+            reason: "RF-205",
+            reply: "Refund will reflect within 5–7 working days.",
+            note: "Eligible for full refund.",
+            team: "Refund Team"
+        },
+        "Refund Status in Credit Card/Debit Card": {
+            title: "Return & Refund – Refund Status in Credit Card/Debit Card",
+            subject: "Refund Pending",
+            reason: "RF-205",
+            reply: "Refund will reflect within 5–7 working days.",
+            note: "Eligible for full refund.",
+            team: "Refund Team"
+        },
+        "Check on Dispute Status": {
+            title: "Return & Refund – Check on Dispute Status",
+            subject: "Refund Pending",
+            reason: "RF-205",
+            reply: "Refund will reflect within 5–7 working days.",
+            note: "Eligible for full refund.",
+            team: "Refund Team"
+        },
+        "Disagreement With a Dispute Outcome": {
+            title: "Return & Refund – Disagreement With a Dispute Outcome",
+            subject: "Refund Pending",
+            reason: "RF-205",
+            reply: "Refund will reflect within 5–7 working days.",
+            note: "Eligible for full refund.",
+            team: "Refund Team"
+        },
+        "Refund Non - Reciept": {
+            title: "Return & Refund – Refund Non - Reciept",
+            subject: "Refund Pending",
+            reason: "RF-205",
+            reply: "Refund will reflect within 5–7 working days.",
+            note: "Eligible for full refund.",
+            team: "Refund Team"
+        },
+        "Urgent Dispute Inquiry": {
+            title: "Return & Refund – Urgent Dispute Inquiry",
+            subject: "Refund Pending",
+            reason: "RF-205",
+            reply: "Refund will reflect within 5–7 working days.",
+            note: "Eligible for full refund.",
+            team: "Refund Team"
+        },
+        "Dispute Related Inquiry": {
+            title: "Return & Refund – Dispute Related Inquiry",
+            subject: "Refund Pending",
+            reason: "RF-205",
+            reply: "Refund will reflect within 5–7 working days.",
+            note: "Eligible for full refund.",
+            team: "Refund Team"
+        },
+        "ASG (ELIGBLE)": {
+            title: "Return & Refund – ASG (ELIGBLE)",
+            subject: "Refund Pending",
+            reason: "RF-205",
+            reply: "Refund will reflect within 5–7 working days.",
+            note: "Eligible for full refund.",
+            team: "Refund Team"
+        },
+        "ASG (NON-ELIGBLE)": {
+            title: "Return & Refund – ASG (ELIGBLE)",
+            subject: "Refund Pending",
+            reason: "RF-205",
+            reply: "Refund will reflect within 5–7 working days.",
+            note: "Eligible for full refund.",
+            team: "Refund Team"
+        },
+    },
+
+    spaylater: {
+        "payment-failed": {
+            title: "SPayLater – Payment Failed",
+            subject: "Payment Issue",
+            reason: "SP-309",
+            reply: [
+                "Please retry after updating your payment details.",
+                "Your SPayLater payment has failed. Please ensure sufficient funds in your linked account.",
+                "You can try making the payment again or use an alternative payment method."
+            ],
+            note: "Advise balance check.",
+            team: "SPayLater Finance"
+        },
+    },
+    others: {
+        "Incomplete Chat": {
+            title: "Others – Incomplete Chat",
+            subject: "Payment Issue",
+            reason: "SP-309",
+            reply: "Please retry after updating your payment details.",
+            note: "Advise balance check.",
+            team: "SPayLater Finance"
+        },
+    }
+};
+
+// Modal data structure with icons
+const modalData = [
+  { 
+    key: 'start', 
+    title: 'Start', 
+    icon: '▶️', 
+    replies: [
+      "Hello! Thank you for reaching out to Shopee Support. My name is [Your Name]. How may I assist you today?",
+      "Good day! I'm [Your Name] from Shopee Support. I'll be happy to help you with your concern.",
+      "Welcome to Shopee Support! I'm [Your Name]. Please tell me how I can help you today."
+    ] 
+  },
+  { 
+    key: 'acknowledge', 
+    title: 'Acknowledge', 
+    icon: '🤝', 
+    replies: [
+      "I understand your concern about [issue]. Let me check this for you.",
+      "Thank you for bringing this to our attention. I can see that you're experiencing [issue].",
+      "I acknowledge your concern regarding [issue]. I'll help you resolve this matter."
+    ] 
+  },
+  { 
+    key: 'probing', 
+    title: 'Probing', 
+    icon: '🔍', 
+    replies: [
+      "To better assist you, could you please provide your order number?",
+      "May I know when you placed this order?",
+      "Could you share the screenshot of the error message you're encountering?",
+      "Have you tried the basic troubleshooting steps like clearing cache and restarting the app?",
+      "What is the specific error message you're seeing?"
+    ] 
+  },
+  { 
+    key: 'confirmation', 
+    title: 'Confirmation', 
+    icon: '✔️', 
+    replies: [
+      "Just to confirm, you're having issues with [specific issue], correct?",
+      "Let me verify: you want to [action], is that right?",
+      "To make sure I understand correctly: [repeat the issue in your own words]."
+    ] 
+  },
+  { 
+    key: 'hold', 
+    title: 'Hold', 
+    icon: '⏸️', 
+    replies: [
+      "Please allow me 2-3 minutes while I check this on our system.",
+      "I need to verify some details. Please hold for a moment.",
+      "Let me investigate this further. I'll be right back with an update."
+    ] 
+  },
+  { 
+    key: 'hold_again', 
+    title: 'Hold Again', 
+    icon: '⌛', 
+    replies: [
+      "I'm still checking this for you. Thank you for your patience.",
+      "Please bear with me a little longer while I finalize the information.",
+      "I need a few more minutes to get the complete details for you."
+    ] 
+  },
+  { 
+    key: 'resolution', 
+    title: 'Resolution', 
+    icon: '🧠', 
+    replies: [
+      "Based on my investigation, [explain resolution]. The issue should now be resolved.",
+      "I've taken the necessary action to [action taken]. You should see the changes within [timeframe].",
+      "The problem has been escalated to our technical team. They'll contact you within 24 hours."
+    ],
+    reminder: "⚠️ REMINDER: Please complete the SOPA documentation and close the case after confirming with the customer."
+  },
+  { 
+    key: 'pre_end', 
+    title: 'Pre-End', 
+    icon: '🔚', 
+    replies: [
+      "Is there anything else I can help you with today?",
+      "Thank you for your patience. Have a great day!",
+      "Feel free to reach out again if you need further assistance. Stay safe!"
+    ] 
+  }
+];
+
+const categorySelect = document.getElementById("categorySelect");
+const subSelect = document.getElementById("subCategorySelect");
+const card = document.getElementById("infoCard");
+const searchInput = document.getElementById("searchInput");
+const searchResults = document.getElementById("searchResults");
+const chatIcon = document.getElementById("chatIcon");
+const chatModal = document.getElementById("chatModal");
+const closeModal = document.getElementById("closeModal");
+const sidebar = document.getElementById("sidebar");
+const contentArea = document.getElementById("contentArea");
+
+// Create a flat array of all cases for searching
+const allCases = [];
+for (const category in data) {
+    const categoryName = getCategoryDisplayName(category);
+    for (const subKey in data[category]) {
+        const caseData = data[category][subKey];
+        
+        // Handle reply text for searching (could be string or array)
+        let replyText = '';
+        if (Array.isArray(caseData.reply)) {
+            replyText = caseData.reply.join(' ');
+        } else {
+            replyText = caseData.reply || '';
+        }
+        
+        allCases.push({
+            category,
+            categoryName,
+            subKey,
+            ...caseData,
+            searchText: `${categoryName} ${subKey.replace(/-/g, ' ')} ${caseData.title} ${caseData.subject} ${caseData.reason} ${replyText} ${caseData.note} ${caseData.team}`.toLowerCase()
+        });
+    }
+}
+
+function getCategoryDisplayName(categoryKey) {
+    const names = {
+        'logistics': 'Logistics',
+        'refund': 'Return & Refund',
+        'spaylater': 'SPayLater'
+    };
+    return names[categoryKey] || categoryKey;
+}
+
+function resetCard() {
+    card.style.display = "none";
+}
+
+function populateSub(category) {
+    subSelect.innerHTML = `<option value="">Select Issue</option>`;
+    Object.keys(data[category]).forEach(key => {
+        const opt = document.createElement("option");
+        opt.value = key;
+        opt.textContent = key.replace(/-/g, " ").toUpperCase();
+        subSelect.appendChild(opt);
+    });
+    subSelect.style.display = "block";
+}
+
+function showCase(category, issue) {
+    const info = data[category][issue];
+    document.getElementById("title").textContent = info.title;
+    document.getElementById("subject").textContent = info.subject;
+    document.getElementById("reason").textContent = info.reason;
+    
+    // Handle replies (could be string or array)
+    const repliesContainer = document.getElementById("replies-container");
+    repliesContainer.innerHTML = ''; // Clear previous replies
+    
+    if (Array.isArray(info.reply)) {
+        // Multiple replies - display each in a separate paragraph
+        info.reply.forEach((replyText, index) => {
+            const replyElement = document.createElement('div');
+            replyElement.className = 'reply-item';
+            replyElement.setAttribute("data-tooltip", "Click to copy");
+            replyElement.dataset.replyText = replyText; // Store the actual reply text
+            
+            if (info.reply.length > 1) {
+                replyElement.innerHTML = `<strong>Reply ${index + 1}:</strong> ${replyText}`;
+            } else {
+                replyElement.textContent = replyText;
+            }
+            repliesContainer.appendChild(replyElement);
+        });
+    } else {
+        // Single reply (string)
+        const replyElement = document.createElement('div');
+        replyElement.className = 'reply-item';
+        replyElement.setAttribute("data-tooltip", "Click to copy");
+        const replyText = info.reply || 'No reply available';
+        replyElement.dataset.replyText = replyText; // Store the actual reply text
+        replyElement.textContent = replyText;
+        repliesContainer.appendChild(replyElement);
+    }
+    
+    document.getElementById("note").textContent = info.note;
+    document.getElementById("team").textContent = info.team;
+    card.style.display = "block";
+    
+    // Setup copy functionality for copyable items
+    setupCopyFunctionality();
+    
+    // Scroll to card
+    card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function openChatModal() {
+    chatModal.style.display = 'block';
+    populateSidebar();
+    // Select the first section by default
+    if (modalData.length > 0) {
+        showSection(modalData[0]);
+    }
+}
+
+function closeChatModal() {
+    chatModal.style.display = 'none';
+}
+
+function populateSidebar() {
+    sidebar.innerHTML = '';
+    
+    modalData.forEach((section, index) => {
+        const iconContainer = document.createElement('div');
+        iconContainer.className = 'sidebar-icon-container';
+        iconContainer.style.display = 'flex';
+        iconContainer.style.flexDirection = 'column';
+        iconContainer.style.alignItems = 'center';
+        
+        const icon = document.createElement('div');
+        icon.className = 'sidebar-icon';
+        if (index === 0) icon.classList.add('active');
+        icon.innerHTML = section.icon;
+        icon.dataset.sectionKey = section.key;
+        icon.dataset.sectionIndex = index;
+        
+        const label = document.createElement('div');
+        label.className = 'sidebar-icon-label';
+        label.textContent = section.title;
+        
+        icon.appendChild(label);
+        iconContainer.appendChild(icon);
+        sidebar.appendChild(iconContainer);
+        
+        // Add click event to icon
+        icon.addEventListener('click', () => {
+            // Remove active class from all icons
+            document.querySelectorAll('.sidebar-icon').forEach(icon => {
+                icon.classList.remove('active');
+            });
+            
+            // Add active class to clicked icon
+            icon.classList.add('active');
+            
+            // Show the corresponding section
+            showSection(section);
+        });
+    });
+}
+
+function showSection(section) {
+    contentArea.innerHTML = '';
+    
+    // Create section title with icon
+    const title = document.createElement('h2');
+    title.className = 'section-title';
+    title.innerHTML = `${section.icon} ${section.title}`;
+    contentArea.appendChild(title);
+    
+    // Create replies container
+    const repliesContainer = document.createElement('div');
+    repliesContainer.className = 'modal-replies-container';
+    
+    // Add replies
+    if (Array.isArray(section.replies)) {
+        section.replies.forEach((replyText, index) => {
+            const replyElement = document.createElement('div');
+            replyElement.className = 'modal-reply-item';
+            replyElement.setAttribute("data-tooltip", "Click to copy");
+            replyElement.dataset.replyText = replyText; // Store the actual reply text
+            
+            if (section.replies.length > 1) {
+                replyElement.innerHTML = `<strong>Reply ${index + 1}:</strong> ${replyText}`;
+            } else {
+                replyElement.textContent = replyText;
+            }
+            repliesContainer.appendChild(replyElement);
+        });
+    } else {
+        // Handle single string reply
+        const replyElement = document.createElement('div');
+        replyElement.className = 'modal-reply-item';
+        replyElement.setAttribute("data-tooltip", "Click to copy");
+        const replyText = section.replies || 'No reply available';
+        replyElement.dataset.replyText = replyText; // Store the actual reply text
+        replyElement.textContent = replyText;
+        repliesContainer.appendChild(replyElement);
+    }
+    
+    contentArea.appendChild(repliesContainer);
+    
+    // Add reminder section if it exists
+    if (section.reminder) {
+        const reminderDiv = document.createElement('div');
+        reminderDiv.className = 'reminder-section';
+        reminderDiv.innerHTML = `
+            <div class="reminder-title">Important Reminder</div>
+            <p>${section.reminder}</p>
+        `;
+        contentArea.appendChild(reminderDiv);
+    }
+    
+    // Setup copy functionality for modal reply items
+    setupModalCopyFunctionality();
+}
+
+function performSearch(query) {
+    query = query.toLowerCase().trim();
+    
+    if (!query) {
+        searchResults.style.display = "none";
+        return;
+    }
+    
+    const results = allCases.filter(caseItem => 
+        caseItem.searchText.includes(query)
+    );
+    
+    displaySearchResults(results, query);
+}
+
+function displaySearchResults(results, query) {
+    searchResults.innerHTML = '';
+    
+    if (results.length === 0) {
+        const noResults = document.createElement("div");
+        noResults.className = "no-results";
+        noResults.textContent = "No results found";
+        searchResults.appendChild(noResults);
+    } else {
+        results.forEach(result => {
+            const item = document.createElement("div");
+            item.className = "search-result-item";
+            
+            // Highlight matching text in title
+            let highlightedTitle = result.title;
+            if (query.length >= 3) {
+                highlightedTitle = highlightMatch(result.title, query);
+            }
+            
+            // Find which field contains the match for preview
+            const matchingField = findMatchingField(result, query);
+            
+            item.innerHTML = `
+                <div class="result-category">${result.categoryName}</div>
+                <div class="result-title">${highlightedTitle}</div>
+                <div class="result-content">${matchingField}</div>
+            `;
+            
+            item.addEventListener("click", () => {
+                selectSearchResult(result.category, result.subKey);
+                searchResults.style.display = "none";
+                searchInput.value = "";
+            });
+            
+            searchResults.appendChild(item);
+        });
+    }
+    
+    searchResults.style.display = "block";
+}
+
+function highlightMatch(text, query) {
+    const regex = new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+    return text.replace(regex, '<span class="result-match">$1</span>');
+}
+
+function findMatchingField(caseItem, query) {
+    // Check which field contains the query
+    const fields = [
+        { text: caseItem.subject, label: 'Subject' },
+        { text: Array.isArray(caseItem.reply) ? caseItem.reply.join(' ') : caseItem.reply, label: 'Reply' },
+        { text: caseItem.note, label: 'Note' },
+        { text: caseItem.team, label: 'Team' },
+        { text: caseItem.reason, label: 'Code' }
+    ];
+    
+    for (const field of fields) {
+        if (field.text && field.text.toLowerCase().includes(query)) {
+            let preview = field.text;
+            if (preview.length > 50) {
+                const startIndex = preview.toLowerCase().indexOf(query);
+                const start = Math.max(0, startIndex - 20);
+                const end = Math.min(preview.length, startIndex + query.length + 30);
+                preview = (start > 0 ? '...' : '') + 
+                         preview.substring(start, end) + 
+                         (end < preview.length ? '...' : '');
+            }
+            return `<strong>${field.label}:</strong> ${highlightMatch(preview, query)}`;
+        }
+    }
+    
+    // If no specific field match, show subject
+    return `<strong>Subject:</strong> ${caseItem.subject.substring(0, 50)}${caseItem.subject.length > 50 ? '...' : ''}`;
+}
+
+function selectSearchResult(category, subKey) {
+    // Set dropdowns
+    categorySelect.value = category;
+    populateSub(category);
+    subSelect.value = subKey;
+    
+    // Show the case
+    showCase(category, subKey);
+}
+
+function setupCopyFunctionality() {
+    // Add copy functionality to copyable info items
+    document.querySelectorAll(".info-item.copyable").forEach(item => {
+        item.setAttribute("data-tooltip", "Click to copy");
+        item.addEventListener("click", () => {
+            const text = item.querySelector("p").textContent;
+            navigator.clipboard.writeText(text);
+            item.classList.add("copied");
+            item.setAttribute("data-tooltip", "Copied!");
+            setTimeout(() => {
+                item.classList.remove("copied");
+                item.setAttribute("data-tooltip", "Click to copy");
+            }, 1200);
+        });
+    });
+    
+    // Add copy functionality to reply items (using data-reply-text)
+    document.querySelectorAll(".reply-item").forEach(item => {
+        item.setAttribute("data-tooltip", "Click to copy");
+        item.addEventListener("click", () => {
+            // Get the actual reply text from data attribute
+            const text = item.dataset.replyText || '';
+            
+            navigator.clipboard.writeText(text);
+            item.classList.add("copied");
+            item.setAttribute("data-tooltip", "Copied!");
+            setTimeout(() => {
+                item.classList.remove("copied");
+                item.setAttribute("data-tooltip", "Click to copy");
+            }, 1200);
+        });
+    });
+}
+
+function setupModalCopyFunctionality() {
+    // Add copy functionality to modal reply items (using data-reply-text)
+    document.querySelectorAll(".modal-reply-item").forEach(item => {
+        item.setAttribute("data-tooltip", "Click to copy");
+        item.addEventListener("click", () => {
+            // Get the actual reply text from data attribute
+            const text = item.dataset.replyText || '';
+            
+            navigator.clipboard.writeText(text);
+            item.classList.add("copied");
+            item.setAttribute("data-tooltip", "Copied!");
+            setTimeout(() => {
+                item.classList.remove("copied");
+                item.setAttribute("data-tooltip", "Click to copy");
+            }, 1200);
+        });
+    });
+}
+
+// Event Listeners
+categorySelect.addEventListener("change", () => {
+    resetCard();
+    searchResults.style.display = "none";
+    subSelect.style.display = "none";
+    if (!categorySelect.value) return;
+    populateSub(categorySelect.value);
+});
+
+subSelect.addEventListener("change", () => {
+    resetCard();
+    searchResults.style.display = "none";
+    if (!subSelect.value) return;
+    showCase(categorySelect.value, subSelect.value);
+});
+
+searchInput.addEventListener("input", (e) => {
+    performSearch(e.target.value);
+});
+
+searchInput.addEventListener("focus", () => {
+    if (searchResults.innerHTML) {
+        searchResults.style.display = "block";
+    }
+});
+
+// Chat icon click event
+chatIcon.addEventListener("click", openChatModal);
+
+// Close modal events
+closeModal.addEventListener("click", closeChatModal);
+
+// Close modal when clicking outside
+chatModal.addEventListener("click", (e) => {
+    if (e.target === chatModal) {
+        closeChatModal();
+    }
+});
+
+// Close modal with Escape key
+document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && chatModal.style.display === 'block') {
+        closeChatModal();
+    } else if (e.key === "Escape") {
+        searchResults.style.display = "none";
+    }
+});
+
+// Close search results when clicking outside
+document.addEventListener("click", (e) => {
+    if (!searchInput.contains(e.target) && !searchResults.contains(e.target)) {
+        searchResults.style.display = "none";
+    }
+});
+
+// Initial setup for copy functionality
+setupCopyFunctionality();
+</script>
+
+</body>
+</html>
