@@ -38,10 +38,10 @@ body {
     position: fixed;
     bottom: 30px;
     right: 30px;
-    width: 60px;
-    height: 60px;
+    width: 35px;
+    height: 35px;
     background: var(--primary);
-    border-radius: 50%;
+    border-radius: 30%;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -416,6 +416,11 @@ body {
     grid-column: span 2;
 }
 
+/* Hide empty items */
+.info-item.hidden {
+    display: none !important;
+}
+
 /* Reply items styling - main card */
 .reply-item {
     margin-bottom: 10px;
@@ -530,8 +535,8 @@ body {
     .chat-icon {
         bottom: 20px;
         right: 20px;
-        width: 50px;
-        height: 50px;
+        width: 45px;
+        height: 45px;
         font-size: 20px;
     }
 }
@@ -579,12 +584,12 @@ body {
                 <div id="replies-container"></div>
             </div>
 
-            <div class="info-item full copyable" data-label="Internal Note">
+            <div class="info-item full copyable" data-label="Internal Note" id="note-item">
                 <label>Internal Note</label>
                 <p id="note"></p>
             </div>
 
-            <div class="info-item full copyable" data-label="Escalation Team">
+            <div class="info-item full copyable" data-label="Escalation Team" id="team-item">
                 <label>Escalation Team</label>
                 <p id="team"></p>
             </div>
@@ -631,8 +636,8 @@ const data = {
                 "The delivery is scheduled for today. You can track the live location in the app.",
                 "Please make sure your contact number is reachable for the delivery attempt."
             ],
-            note: "N/A",
-            team: "N/A"
+            note: "sample internal note",
+            team: "sample escalation team"
         },
         "Order Status Inquiry": {
             title: "Logistics – Order Status Inquiry",
@@ -642,8 +647,8 @@ const data = {
                 "I can see your order is currently being processed. Expected delivery is within 3-5 business days.",
                 "Your order has been shipped and is in transit to your location."
             ],
-            note: "N/A",
-            team: "N/A"
+            note: "",
+            team: ""
         },
         "Wrong Address": {
             title: "Logistics – Wrong Address",
@@ -1095,7 +1100,7 @@ const modalData = [
   { 
     key: 'resolution', 
     title: 'Resolution', 
-    icon: '🧠', 
+    icon: '🔧', 
     replies: [
       "Based on my investigation, [explain resolution]. The issue should now be resolved.",
       "I've taken the necessary action to [action taken]. You should see the changes within [timeframe].",
@@ -1125,6 +1130,8 @@ const chatModal = document.getElementById("chatModal");
 const closeModal = document.getElementById("closeModal");
 const sidebar = document.getElementById("sidebar");
 const contentArea = document.getElementById("contentArea");
+const noteItem = document.getElementById("note-item");
+const teamItem = document.getElementById("team-item");
 
 // Create a flat array of all cases for searching
 const allCases = [];
@@ -1211,8 +1218,26 @@ function showCase(category, issue) {
         repliesContainer.appendChild(replyElement);
     }
     
-    document.getElementById("note").textContent = info.note;
-    document.getElementById("team").textContent = info.team;
+    // Handle note - show only if not empty
+    const noteElement = document.getElementById("note");
+    noteElement.textContent = info.note || '';
+    
+    if (info.note && info.note.trim() !== "") {
+        noteItem.classList.remove("hidden");
+    } else {
+        noteItem.classList.add("hidden");
+    }
+    
+    // Handle team - show only if not empty
+    const teamElement = document.getElementById("team");
+    teamElement.textContent = info.team || '';
+    
+    if (info.team && info.team.trim() !== "") {
+        teamItem.classList.remove("hidden");
+    } else {
+        teamItem.classList.add("hidden");
+    }
+    
     card.style.display = "block";
     
     // Setup copy functionality for copyable items
